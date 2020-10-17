@@ -60,26 +60,22 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 		_, idPresent := r.Form["id"]
 		_, startTime := r.Form["startTime"]
 		_, stopTime := r.Form["stopTime"]
-
-		if startTime && stopTime {
-			query := r.URL.Query()
-			fmt.Fprintf(w, "Sending meeting details within  %v %v", query["startTime"][0], query["stopTime"][0])
-		} else {
-			fmt.Fprintf(w, "This participant does not exist in the database")
+		if !participant && !startTime && !stopTime {
+			idPresent = true
 		}
-
 		if idPresent {
-			query := r.URL.Query()
-			fmt.Fprintf(w, "Sending meeting details of the participant with given id: %v\n", query["id"][0])
+			//Send Participant information using given ID
+			fmt.Fprintf(w, "%v", r.URL.Path[len("/meetings/"):])
 		} else {
-			fmt.Fprintf(w, "This participant does not exist in the database")
-		}
-
-		if participant {
-			query := r.URL.Query()
-			fmt.Fprintf(w, "Sending meeting details of the participant with email: %v\n", query["participant"][0])
-		} else {
-			fmt.Fprintf(w, "This participant does not exist in the database")
+			if participant {
+				fmt.Fprintf(w, "sending information for participant: %v", r.Form["participant"])
+			} else {
+				if startTime && stopTime {
+					fmt.Fprintf(w, "sending information from %v to %v", r.Form["startTime"], r.Form["stopTime"])
+				} else {
+					fmt.Fprintf(w, "Please specify both the parameters i.e startTime and stopTime")
+				}
+			}
 
 		}
 
@@ -123,7 +119,7 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 func main() {
 	mongoInit()
 
-	http.HandleFunc("/meetings", scheduleMeeting)
+	http.HandleFunc("/meetings/", scheduleMeeting)
 
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
