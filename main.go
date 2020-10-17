@@ -77,18 +77,13 @@ func findByIdAndSend(id string) string {
 	if err != nil {
 		return err.Error()
 	} else {
-		fmt.Println(jsonResponse)
-		return "converted"
+		if string(jsonResponse) != "null" {
+			fmt.Println(string(jsonResponse))
+			return string(jsonResponse)
+		} else {
+			return "No Meeting found corresponding to the given id"
+		}
 	}
-	// cursor, err := collectionMeetings.Find(ctx, bson.M{})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// var meetings []bson.M
-	// if err = cursor.All(ctx, &meetings); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(meetings)
 
 }
 
@@ -105,8 +100,8 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 		}
 		if idPresent {
 			//Send Participant information using given ID
-			fmt.Fprintf(w, "%v", r.URL.Path[len("/meetings/"):])
-			fmt.Println(findByIdAndSend(r.URL.Path[len("/meetings/"):]))
+			response := findByIdAndSend(r.URL.Path[len("/meetings/"):])
+			fmt.Fprintf(w, "%v", response)
 
 		} else {
 			if participant {
