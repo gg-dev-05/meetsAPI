@@ -57,6 +57,23 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		r.ParseForm()
 		_, participant := r.Form["participant"]
+		_, idPresent := r.Form["id"]
+		_, startTime := r.Form["startTime"]
+		_, stopTime := r.Form["stopTime"]
+
+		if startTime && stopTime {
+			query := r.URL.Query()
+			fmt.Fprintf(w, "Sending meeting details within  %v %v", query["startTime"][0], query["stopTime"][0])
+		} else {
+			fmt.Fprintf(w, "This participant does not exist in the database")
+		}
+
+		if idPresent {
+			query := r.URL.Query()
+			fmt.Fprintf(w, "Sending meeting details of the participant with given id: %v\n", query["id"][0])
+		} else {
+			fmt.Fprintf(w, "This participant does not exist in the database")
+		}
 
 		if participant {
 			query := r.URL.Query()
