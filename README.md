@@ -1,4 +1,4 @@
-# meetingsAPI
+# meetsAPI
 
 
 An API designed for scheduling meetings.
