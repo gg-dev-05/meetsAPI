@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -52,6 +54,44 @@ func mongoInit() {
 
 }
 
+func findByIdAndSend(id string) string {
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Println("Invalid id")
+		return id + " is an invalid object id"
+
+	}
+
+	filterCursor, err := collectionMeetings.Find(ctx, bson.M{"_id": objectId})
+	if err != nil {
+		log.Fatal(err)
+	}
+	var meeting []bson.M
+	if err = filterCursor.All(ctx, &meeting); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(meeting)
+	jsonResponse, err := json.Marshal(meeting)
+
+	if err != nil {
+		return err.Error()
+	} else {
+		fmt.Println(jsonResponse)
+		return "converted"
+	}
+	// cursor, err := collectionMeetings.Find(ctx, bson.M{})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// var meetings []bson.M
+	// if err = cursor.All(ctx, &meetings); err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(meetings)
+
+}
+
 func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -66,6 +106,8 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 		if idPresent {
 			//Send Participant information using given ID
 			fmt.Fprintf(w, "%v", r.URL.Path[len("/meetings/"):])
+			fmt.Println(findByIdAndSend(r.URL.Path[len("/meetings/"):]))
+
 		} else {
 			if participant {
 				fmt.Fprintf(w, "sending information for participant: %v", r.Form["participant"])
