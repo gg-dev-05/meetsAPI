@@ -104,8 +104,10 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 			//Send Participant information using given ID
 			response, err := findByIdAndSend(r.URL.Path[len("/meetings/"):])
 
-			if err != "passed" {
-				fmt.Fprintf(w, "Something went wrong")
+			if response == nil {
+				fmt.Fprintf(w, err)
+			} else if err != "passed" {
+				fmt.Fprintf(w, "The given id does not exist in the database")
 
 			} else {
 				w.Header().Set("content-type", "application/json")
