@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -25,8 +26,8 @@ type Participant struct {
 type Meeting struct {
 	Title string
 	// Participants      []Participant //TODO: Add participants
-	startTime         time.Time
-	endTime           time.Time
+	startTime         string
+	endTime           string
 	creationTimestamp time.Time
 }
 
@@ -54,12 +55,13 @@ func mongoInit() {
 
 }
 
-func findByIdAndSend(id string) string {
+//This function sends json object as a string if the it is present in the collection by searching by _id
+func findByIdAndSend(id string) ([]byte, string) {
 
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		log.Println("Invalid id")
-		return id + " is an invalid object id"
+		return nil, id + " is an invalid object id"
 
 	}
 
@@ -75,13 +77,13 @@ func findByIdAndSend(id string) string {
 	jsonResponse, err := json.Marshal(meeting)
 
 	if err != nil {
-		return err.Error()
+		return nil, err.Error()
 	} else {
 		if string(jsonResponse) != "null" {
 			fmt.Println(string(jsonResponse))
-			return string(jsonResponse)
+			return jsonResponse, "passed"
 		} else {
-			return "No Meeting found corresponding to the given id"
+			return nil, "No Meeting found corresponding to the given id"
 		}
 	}
 
@@ -100,8 +102,16 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 		}
 		if idPresent {
 			//Send Participant information using given ID
-			response := findByIdAndSend(r.URL.Path[len("/meetings/"):])
-			fmt.Fprintf(w, "%v", response)
+			response, err := findByIdAndSend(r.URL.Path[len("/meetings/"):])
+
+			if err != "passed" {
+				fmt.Fprintf(w, "Something went wrong")
+
+			} else {
+				w.Header().Set("content-type", "application/json")
+				w.Write(response)
+
+			}
 
 		} else {
 			if participant {
@@ -117,35 +127,70 @@ func scheduleMeeting(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "POST":
-		decoder := json.NewDecoder(r.Body)
 
-		var newMeeting Meeting
-		err := decoder.Decode(&newMeeting)
+		b, err := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
 
 		if err != nil {
-			fmt.Fprintf(w, err.Error())
-
-		} else {
-
-			if newMeeting.Title == "" {
-				fmt.Fprintf(w, "Please give meeting title")
-			} else {
-				fmt.Println("Here")
-				title := newMeeting.Title
-				// participants := newMeeting.Participants
-				startTime := newMeeting.startTime
-				endTime := newMeeting.endTime
-				creationTimestamp := time.Now()
-				m1 := &Meeting{Title: title, startTime: startTime, endTime: endTime, creationTimestamp: creationTimestamp}
-				insertResult, err := collectionMeetings.InsertOne(context.TODO(), m1)
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Fprintf(w, "Meeting Created with ID as: %v\n", insertResult.InsertedID)
-				fmt.Println("Meeting Created with ID as: ", insertResult.InsertedID)
-
-			}
+			http.Error(w, err.Error(), 500)
+			return
 		}
+
+		var newMeet Meeting
+		err = json.Unmarshal(b, &newMeet)
+
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		output, err := json.Marshal(newMeet)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		w.Header().Set("content-type", "application/json")
+		w.Write(output)
+		// decoder := json.NewDecoder(r.Body)
+
+		// var newMeeting Meeting
+		// err := decoder.Decode(&newMeeting)
+		// fmt.Println(r.Body)
+		// if err != nil {
+		// 	fmt.Fprintf(w, err.Error())
+
+		// } else {
+
+		// 	if newMeeting.Title == "" {
+		// 		fmt.Fprintf(w, "Please give meeting title")
+		// 	} else {
+		// 		fmt.Println("Creating new meeting")
+
+		// 		b, err := ioutil.ReadAll(r.Body)
+		// 		defer r.Body.Close()
+
+		// 		if err != nil {
+		// 			fmt.Fprintf(w, err.Error())
+		// 		}
+
+		// 		fmt.Println(b)
+		// 		// title := newMeeting.Title
+		// 		// // participants := newMeeting.Participants
+		// 		// startTime := newMeeting.startTime
+		// 		// endTime := newMeeting.endTime
+		// 		// creationTimestamp := time.Now()
+		// 		// fmt.Println(newMeeting)
+
+		// 		// m1 := &Meeting{Title: title, startTime: startTime, endTime: endTime, creationTimestamp: creationTimestamp}
+		// 		// insertResult, err := collectionMeetings.InsertOne(context.TODO(), m1)
+		// 		// if err != nil {
+		// 		// 	log.Fatal(err)
+		// 		// }
+		// 		// fmt.Fprintf(w, "Meeting Created with ID as: %v\n", insertResult.InsertedID)
+		// 		// fmt.Println("Meeting Created as ")
+
+		// 	}
 
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
